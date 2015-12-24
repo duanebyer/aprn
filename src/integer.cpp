@@ -16,6 +16,15 @@ Integer::Integer() {
   m_digits.push_back(0);
 }
 
+Integer::Integer(signed char val) : Integer((signed long long) val) {}
+Integer::Integer(unsigned char val) : Integer((unsigned long long) val) {}
+Integer::Integer(signed short val) : Integer((signed long long) val) {}
+Integer::Integer(unsigned short val) : Integer((unsigned long long) val) {}
+Integer::Integer(signed int val) : Integer((signed long long) val) {}
+Integer::Integer(unsigned int val) : Integer((unsigned long long) val) {}
+Integer::Integer(signed long val) : Integer((signed long long) val) {}
+Integer::Integer(unsigned long val) : Integer((unsigned long long) val) {}
+
 Integer::Integer(signed long long val) {
   int bytes = sizeof(val);
   int bytesPerDigit = sizeof(Digit);
@@ -241,7 +250,7 @@ void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_o
       }
       rhsEnd = *reinterpret_cast<Integer::Digit*>(rhs.m_digits[rhsNumDigits - 1]);
       currentQuotient = dividendEnd / (rhsEnd + 1);
-      Integer quotientProduct = rhs * (long long unsigned) currentQuotient; // TODO make this cast nicer
+      Integer quotientProduct = rhs * currentQuotient;
       
       for (Integer::Digit quotient = currentQuotient + 1; quotient <= Integer::MAX_DIGIT; ++quotient) {
         Integer nextQuotientProduct = rhs * (long long unsigned) quotient;
@@ -369,21 +378,30 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
   if (sign == 0) {
     os << '0';
   }
-  else {
+  else if (base == 10) {
     std::string output = "";
     while (true) {
-      if (value < Integer((unsigned long long) base)) { // TODO fix this
+      if (value < Integer(base)) {
         output.push_back(digits[value.m_digits.front()]);
         break;
       }
       else {
         Integer quotient, remainder;
-        quotRem(value, (unsigned long long) base, quotient, remainder); // TODO this too, the ugly cast
+        quotRem(value, base, quotient, remainder);
         value = quotient;
         output.push_back(digits[remainder.m_digits.front()]);
       }
     }
     os << output;
+  }
+  else {
+    std::ios::fmtflags oldFlags = os.flags();
+    os.unsetf(std::ios::showbase);
+    os.unsetf(std::ios::showpos);
+    for (Integer::SizeType i = value.m_digits.size() - 1; i >= 0; --i) {
+      os << value.m_digits[i];
+    }
+    os.flags(oldFlags);
   }
   
   return os;

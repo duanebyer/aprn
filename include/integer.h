@@ -22,6 +22,14 @@ namespace aprn {
     
     // TODO: unary plus operator
     Integer();
+    Integer(signed char val);
+    Integer(unsigned char val);
+    Integer(signed short val);
+    Integer(unsigned short val);
+    Integer(signed int val);
+    Integer(unsigned int val);
+    Integer(signed long val);
+    Integer(unsigned long val);
     Integer(signed long long val);
     Integer(unsigned long long val);
     
