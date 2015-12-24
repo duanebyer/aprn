@@ -1,4 +1,4 @@
-#include "include/integer.h"
+#include "../include/integer.h"
 
 #include <algorithm>
 #include <istream>
@@ -9,13 +9,17 @@
 
 using namespace aprn;
 
-Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
-Digit const Integer::CRITICAL_DIGIT = MAX_DIGIT / 2;
+Integer::Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
+Integer::Digit const Integer::CRITICAL_DIGIT = MAX_DIGIT / 2;
+
+Integer::Integer() {
+  m_digits.push_back(0);
+}
 
 Integer::Integer(signed long long val) {
   int bytes = sizeof(val);
   int bytesPerDigit = sizeof(Digit);
-  Digit* valPtr = m_digits[i] = *reinterpret_cast<Digit*>(&val);
+  Digit* valPtr = reinterpret_cast<Digit*>(&val);
   m_digits.resize(bytes / bytesPerDigit);
   for (int i = 0; i < m_digits.size(); ++i) {
     m_digits[i] = valPtr[i];
@@ -25,12 +29,12 @@ Integer::Integer(signed long long val) {
 Integer::Integer(unsigned long long val) {
   int bytes = sizeof(val);
   int bytesPerDigit = sizeof(Digit);
-  Digit* valPtr = m_digits[i] = *reinterpret_cast<Digit*>(&val);
+  Digit* valPtr = reinterpret_cast<Digit*>(&val);
   m_digits.resize(bytes / bytesPerDigit);
   for (int i = 0; i < m_digits.size(); ++i) {
     m_digits[i] = valPtr[i];
   }
-  if (m_digits.last() >= CRITICAL_DIGIT) {
+  if (m_digits.back() >= CRITICAL_DIGIT) {
     m_digits.push_back(0);
   }
 }
@@ -40,18 +44,29 @@ void makeValid(Integer& val) {
   bool validForm = false;
   while(!validForm && val.m_digits.size() >= 2) {
     if (
-        val.m_digits.last() == MAX_DIGIT &&
-        val.m_digits[m_digits.size() - 2] >= CRITICAL_DIGIT) {
-      valm_digits.pop_back();
+        val.m_digits.back() == Integer::MAX_DIGIT &&
+        val.m_digits[val.m_digits.size() - 2] >= Integer::CRITICAL_DIGIT) {
+      val.m_digits.pop_back();
     }
     else if (
-             val.m_digits.last() == 0 &&
-             val.m_digits[m_digits.size() - 2] < CRITICAL_DIGIT) {
+             val.m_digits.back() == 0 &&
+             val.m_digits[val.m_digits.size() - 2] < Integer::CRITICAL_DIGIT) {
       val.m_digits.pop_back();
     }
     else {
       validForm = true;
     }
+  }
+}
+
+int aprn::signum(Integer const& val) {
+  if (val.m_digits.size() == 1 && val.m_digits.front() == 0) {
+    return 0;
+  }
+  else {
+    return
+      (val.m_digits.back() < Integer::CRITICAL_DIGIT) -
+      (val.m_digits.back() > Integer::CRITICAL_DIGIT);
   }
 }
 
@@ -104,7 +119,7 @@ Integer& Integer::operator--() {
     m_digits.push_back(MAX_DIGIT);
   }
   if (
-      lastCarryIndex = m_digits.size() - 2 &&
+      lastBorrowIndex = m_digits.size() - 2 &&
       m_digits.back() == 0 &&
       m_digits[m_digits.size() - 2] == CRITICAL_DIGIT - 1) {
     m_digits.pop_back();
@@ -114,15 +129,15 @@ Integer& Integer::operator--() {
 
 Integer& Integer::operator+=(Integer const& rhs) {
   SizeType numDigits = std::max(m_digits.size(), rhs.m_digits.size());
-  bool lhsIsNegative = m_digits.last() >= CRITICAL_DIGIT;
-  bool rhsIsNegative = rhs.m_digits.last() >= CRITICAL_DIGIT;
+  bool lhsIsNegative = m_digits.back() >= CRITICAL_DIGIT;
+  bool rhsIsNegative = rhs.m_digits.back() >= CRITICAL_DIGIT;
   bool hasCarry = false;
   
-  m_digits.resize(numDigits, isNegative * MAX_DIGIT);
+  m_digits.resize(numDigits, lhsIsNegative * MAX_DIGIT);
   
   for (SizeType i = 0; i < numDigits; ++i) {
     Digit lhsDigit = m_digits[i];
-    Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : (rhsIsNegative * MAX_DIGIT)
+Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : (rhsIsNegative * MAX_DIGIT);
     Digit minDigit = std::min(m_digits[i], rhs.m_digits[i]);
 
     m_digits[i] += rhs.m_digits[i] + hasCarry;
@@ -138,7 +153,7 @@ Integer& Integer::operator+=(Integer const& rhs) {
   return *this;
 }
 
-Integer& operator*=(Integer const& rhs) {
+Integer& Integer::operator*=(Integer const& rhs) {
   Integer lhs(*this);
   Digit carry = 0;
   
@@ -148,15 +163,15 @@ Integer& operator*=(Integer const& rhs) {
   for (SizeType i = 0; i < rhs.m_digits.size(); ++i) {
     Digit rhsDigit = rhs.m_digits[i];
     Integer nextSum;
-    nextSum.resize(i, 0);
+    nextSum.m_digits.resize(i, 0);
     carry = 0;
     for (SizeType j = 0; j < lhs.m_digits.size(); ++j) {
       Digit lhsDigit = lhs.m_digits[j];
       DoubleDigit digitProduct = lhsDigit * rhsDigit + carry;
       carry = reinterpret_cast<Digit*>(&digitProduct)[0];
-      nextSum.push_back(reinterpret_cast<Digit*>(&digitProduct)[1]);
+      nextSum.m_digits.push_back(reinterpret_cast<Digit*>(&digitProduct)[1]);
     }
-    nextSum.push_back(carry);
+    nextSum.m_digits.push_back(carry);
     operator+=(nextSum);
   }
   
@@ -165,64 +180,72 @@ Integer& operator*=(Integer const& rhs) {
   return *this;
 }
 
-Integer& operator/=(Integer const& rhs) {
+Integer& Integer::operator/=(Integer const& rhs) {
   Integer lhs(*this);
-  quotRem(lhs, rhs, *this, Integer(0));
+  Integer blank = Integer();
+  quotRem(lhs, rhs, *this, blank);
   return *this;
 }
 
-Integer& operator%=(Integer const& rhs) {
+Integer& Integer::operator%=(Integer const& rhs) {
   Integer lhs(*this);
-  quotRem(lhs, rhs, Integer(0), *this);
+  Integer blank = Integer();
+  quotRem(lhs, rhs, blank, *this);
   return *this;
 }
 
-void quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out) {
-  if (lhs < rhs) {
-    quot_out = Integer(0);
-    rem_out = Integer(lhs);
+void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_out, Integer& rem_out) {
+  if (lhsRef < rhsRef) {
+    quot_out = Integer();
+    rem_out = Integer(lhsRef);
   }
-  if (rhs == 0) {
+  
+  int lhsSign = signum(lhsRef);
+  int rhsSign = signum(rhsRef);
+  int quotSign = lhsSign * rhsSign;
+  Integer currentDividend;
+  
+  if (signum(rhsRef) == 0) {
     return;
   }
   
-  int lhsSign = signum(lhs);
-  int rhsSign = signum(rhs);
-  int quotSign = lhsSign * rhsSign;
-  quot_out.m_digits.resize(lhs.m_digits.size(), (quotSign < 0) * MAX_DIGIT);
-  Integer currentDividend;
+  quot_out.m_digits.resize(lhsRef.m_digits.size(), (quotSign < 0) * Integer::MAX_DIGIT);
+  
+  Integer lhs = Integer(lhsRef);
+  Integer rhs = Integer(rhsRef);
   
   if (lhsSign < 0) {
-    lhs = -lhs;
+    lhs.negate();
   }
   if (rhsSign < 0) {
-    rhs = -rhs;
+    rhs.negate();
   }
   
-  for (SizeType i = lhs.m_digits.size() - 1; i >= 0; --i) {
-    currentDividend.insert(currentDividend.begin(), lhs.m_digits[i]);
-    Digit currentQuotient;
-    SizeType currentDividendNumDigits = currentDividend.m_digits.size();
-    SizeType rhsNumDigits = rhs.m_digits.size();
+  for (Integer::SizeType i = lhs.m_digits.size() - 1; i >= 0; --i) {
+    currentDividend.m_digits.insert(currentDividend.m_digits.begin(), lhs.m_digits[i]);
+    Integer::Digit currentQuotient;
+    Integer::SizeType currentDividendNumDigits = currentDividend.m_digits.size();
+    Integer::SizeType rhsNumDigits = rhs.m_digits.size();
     if (currentDividendNumDigits < rhsNumDigits) {
       currentQuotient = 0;
     }
     else if (currentDividendNumDigits >= rhsNumDigits) {
-      Digit* dividendEndPtr = reinterpret_cast<Digit*>(currentDividend.m_digits[currentDividendNumDigits - 1]);
-      DoubleDigit dividendEnd, rhsEnd;
+      Integer::Digit* dividendEndPtr =
+        reinterpret_cast<Integer::Digit*>(currentDividend.m_digits[currentDividendNumDigits - 1]);
+      Integer::DoubleDigit dividendEnd, rhsEnd;
       if (currentDividendNumDigits == rhsNumDigits) {
         dividendEnd = *dividendEndPtr;
       }
       else {
-        dividendEnd = *reinterpret_cast<DoubleDigit*>(dividendEndPtr);
+        dividendEnd = *reinterpret_cast<Integer::DoubleDigit*>(dividendEndPtr);
       }
-      rhsEnd = *reinterpret_cast<Digit*>(rhs.m_digits[rhsNumDigits - 1]);
+      rhsEnd = *reinterpret_cast<Integer::Digit*>(rhs.m_digits[rhsNumDigits - 1]);
       currentQuotient = dividendEnd / (rhsEnd + 1);
-      Integer quotientProduct = rhs * i;
+      Integer quotientProduct = rhs * (long long unsigned) currentQuotient; // TODO make this cast nicer
       
-      for (Digit i = currentQuotient + 1; i <= MAX_DIGIT; ++i) {
-        Integer nextQuotientProduct = rhs * i;
-        if (product > currentDividend) {
+      for (Integer::Digit quotient = currentQuotient + 1; quotient <= Integer::MAX_DIGIT; ++quotient) {
+        Integer nextQuotientProduct = rhs * (long long unsigned) quotient;
+        if (nextQuotientProduct > currentDividend) {
           break;
         }
         else {
@@ -250,7 +273,7 @@ void quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer&
   }
 }
 
-bool operator==(Integer const& lhs, Integer const& rhs) {
+bool aprn::operator==(Integer const& lhs, Integer const& rhs) {
   if (lhs.m_digits.size() != rhs.m_digits.size()) {
     return false;
   }
@@ -264,7 +287,7 @@ bool operator==(Integer const& lhs, Integer const& rhs) {
   return true;
 }
 
-bool operator<(Integer const& lhs, Integer const& rhs) {
+bool aprn::operator<(Integer const& lhs, Integer const& rhs) {
   int lhsSignum = signum(lhs);
   int rhsSignum = signum(rhs);
   
@@ -303,7 +326,7 @@ bool operator<(Integer const& lhs, Integer const& rhs) {
   return false;
 }
 
-std::ostream& operator<<(std::ostream& os, Integer const& obj) {
+std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
   int base = 10;
   int sign = signum(obj);
   Integer value = sign < 0 ? -obj : obj;
@@ -349,14 +372,15 @@ std::ostream& operator<<(std::ostream& os, Integer const& obj) {
   else {
     std::string output = "";
     while (true) {
-      if (value < base) {
-        output.push_back(digits[(int) value]);
+      if (value < Integer((unsigned long long) base)) { // TODO fix this
+        output.push_back(digits[value.m_digits.front()]);
         break;
       }
       else {
-        Integer[] dr = divRem(value, base);
-        value = dr[0];
-        output.push_back(digits[(int) dr[1]]);
+        Integer quotient, remainder;
+        quotRem(value, (unsigned long long) base, quotient, remainder); // TODO this too, the ugly cast
+        value = quotient;
+        output.push_back(digits[remainder.m_digits.front()]);
       }
     }
     os << output;
@@ -365,7 +389,7 @@ std::ostream& operator<<(std::ostream& os, Integer const& obj) {
   return os;
 }
 
-std::istream& operator>>(std::istream& is, Integer& obj) {
+std::istream& aprn::operator>>(std::istream& is, Integer& obj) {
   if (/* no valid integer */true) {
     is.setstate(std::ios::failbit);
   }

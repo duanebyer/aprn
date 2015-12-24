@@ -21,6 +21,7 @@ namespace aprn {
   public:
     
     // TODO: unary plus operator
+    Integer();
     Integer(signed long long val);
     Integer(unsigned long long val);
     
@@ -48,7 +49,7 @@ namespace aprn {
     Integer& operator%=(Integer const& rhs);
 
     Integer& operator-=(Integer const& rhs) {
-      operator+=(-rhs());
+      operator+=(-rhs);
       return *this;
     }
 
@@ -96,18 +97,10 @@ namespace aprn {
 
   };
 
-  int signum(Integer const& val) {
-    if (val.m_digits.size() == 1 && val.m_digits.front() == 0) {
-      return 0;
-    }
-    else {
-      return
-        (val.m_digits.back() < Integer::CRITICAL_DIGIT) -
-        (val.m_digits.back() > Integer::CRITICAL_DIGIT);
-    }
-  }
+  int signum(Integer const& val);
+  void quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out);
   
-  std::ostream& operator<<(std::ostream os&, Integer const& obj);
+  std::ostream& operator<<(std::ostream& os, Integer const& obj);
   std::istream& operator>>(std::istream& is, Integer& obj);
 
   bool operator==(Integer const& lhs, Integer const& rhs);
