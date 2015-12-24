@@ -14,13 +14,15 @@ namespace aprn {
     friend std::istream& operator>>(std::istream& is, Integer& obj);
     
     friend int signum(Integer const& val);
-    friend Integer[] divRem(Integer const& lhs, Integer const& rhs);
+    friend void quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out);
     friend bool operator==(Integer const& lhs, Integer const& rhs);
     friend bool operator<(Integer const& lhs, Integer const& rhs);
 
   public:
     
     // TODO: unary plus operator
+    Integer(signed long long val);
+    Integer(unsigned long long val);
     
     Integer operator-() const;
     Integer& negate();
@@ -50,7 +52,7 @@ namespace aprn {
       return *this;
     }
 
-  private:
+    //private:
 
     // Implementation Details
     // ----------------------

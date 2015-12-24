@@ -9,9 +9,33 @@
 
 using namespace aprn;
 
-const Digit Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
-const Digit Integer::CRITICAL_DIGIT = MAX_DIGIT / 2;
+Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
+Digit const Integer::CRITICAL_DIGIT = MAX_DIGIT / 2;
 
+Integer::Integer(signed long long val) {
+  int bytes = sizeof(val);
+  int bytesPerDigit = sizeof(Digit);
+  Digit* valPtr = m_digits[i] = *reinterpret_cast<Digit*>(&val);
+  m_digits.resize(bytes / bytesPerDigit);
+  for (int i = 0; i < m_digits.size(); ++i) {
+    m_digits[i] = valPtr[i];
+  }
+}
+
+Integer::Integer(unsigned long long val) {
+  int bytes = sizeof(val);
+  int bytesPerDigit = sizeof(Digit);
+  Digit* valPtr = m_digits[i] = *reinterpret_cast<Digit*>(&val);
+  m_digits.resize(bytes / bytesPerDigit);
+  for (int i = 0; i < m_digits.size(); ++i) {
+    m_digits[i] = valPtr[i];
+  }
+  if (m_digits.last() >= CRITICAL_DIGIT) {
+    m_digits.push_back(0);
+  }
+}
+
+// Takes an integer in invalid form and makes it valid.
 void makeValid(Integer& val) {
   bool validForm = false;
   while(!validForm && val.m_digits.size() >= 2) {
@@ -141,8 +165,89 @@ Integer& operator*=(Integer const& rhs) {
   return *this;
 }
 
-Integer[] divRem(Integer const& lhs, Integer const& rhs) {
+Integer& operator/=(Integer const& rhs) {
+  Integer lhs(*this);
+  quotRem(lhs, rhs, *this, Integer(0));
+  return *this;
+}
+
+Integer& operator%=(Integer const& rhs) {
+  Integer lhs(*this);
+  quotRem(lhs, rhs, Integer(0), *this);
+  return *this;
+}
+
+void quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out) {
+  if (lhs < rhs) {
+    quot_out = Integer(0);
+    rem_out = Integer(lhs);
+  }
+  if (rhs == 0) {
+    return;
+  }
   
+  int lhsSign = signum(lhs);
+  int rhsSign = signum(rhs);
+  int quotSign = lhsSign * rhsSign;
+  quot_out.m_digits.resize(lhs.m_digits.size(), (quotSign < 0) * MAX_DIGIT);
+  Integer currentDividend;
+  
+  if (lhsSign < 0) {
+    lhs = -lhs;
+  }
+  if (rhsSign < 0) {
+    rhs = -rhs;
+  }
+  
+  for (SizeType i = lhs.m_digits.size() - 1; i >= 0; --i) {
+    currentDividend.insert(currentDividend.begin(), lhs.m_digits[i]);
+    Digit currentQuotient;
+    SizeType currentDividendNumDigits = currentDividend.m_digits.size();
+    SizeType rhsNumDigits = rhs.m_digits.size();
+    if (currentDividendNumDigits < rhsNumDigits) {
+      currentQuotient = 0;
+    }
+    else if (currentDividendNumDigits >= rhsNumDigits) {
+      Digit* dividendEndPtr = reinterpret_cast<Digit*>(currentDividend.m_digits[currentDividendNumDigits - 1]);
+      DoubleDigit dividendEnd, rhsEnd;
+      if (currentDividendNumDigits == rhsNumDigits) {
+        dividendEnd = *dividendEndPtr;
+      }
+      else {
+        dividendEnd = *reinterpret_cast<DoubleDigit*>(dividendEndPtr);
+      }
+      rhsEnd = *reinterpret_cast<Digit*>(rhs.m_digits[rhsNumDigits - 1]);
+      currentQuotient = dividendEnd / (rhsEnd + 1);
+      Integer quotientProduct = rhs * i;
+      
+      for (Digit i = currentQuotient + 1; i <= MAX_DIGIT; ++i) {
+        Integer nextQuotientProduct = rhs * i;
+        if (product > currentDividend) {
+          break;
+        }
+        else {
+          quotientProduct = nextQuotientProduct;
+          currentQuotient = i;
+        }
+      }
+      
+      currentDividend -= quotientProduct;
+    }
+    
+    quot_out.m_digits[i] = currentQuotient;
+  }
+  
+  rem_out = currentDividend;
+  
+  makeValid(quot_out);
+  makeValid(rem_out);
+  
+  if (quotSign == -quotSign) {
+    quot_out.negate();
+    if (signum(rem_out) != 0) {
+      quot_out -= rhs;
+    }
+  }
 }
 
 bool operator==(Integer const& lhs, Integer const& rhs) {
