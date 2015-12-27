@@ -1,13 +1,17 @@
 #include "../include/integer.h"
 
 #include <algorithm>
+#include <iomanip>
 #include <istream>
 #include <limits>
 #include <ostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
 using namespace aprn;
+
+void makeValid(Integer& val);
 
 Integer::Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
 Integer::Digit const Integer::CRITICAL_DIGIT = MAX_DIGIT / 2;
@@ -30,9 +34,10 @@ Integer::Integer(signed long long val) {
   int bytesPerDigit = sizeof(Digit);
   Digit* valPtr = reinterpret_cast<Digit*>(&val);
   m_digits.resize(bytes / bytesPerDigit);
-  for (int i = 0; i < m_digits.size(); ++i) {
+  for (SizeType i = 0; i < m_digits.size(); ++i) {
     m_digits[i] = valPtr[i];
   }
+  makeValid(*this);
 }
 
 Integer::Integer(unsigned long long val) {
@@ -40,12 +45,13 @@ Integer::Integer(unsigned long long val) {
   int bytesPerDigit = sizeof(Digit);
   Digit* valPtr = reinterpret_cast<Digit*>(&val);
   m_digits.resize(bytes / bytesPerDigit);
-  for (int i = 0; i < m_digits.size(); ++i) {
+  for (SizeType i = 0; i < m_digits.size(); ++i) {
     m_digits[i] = valPtr[i];
   }
   if (m_digits.back() >= CRITICAL_DIGIT) {
     m_digits.push_back(0);
   }
+  makeValid(*this);
 }
 
 // Takes an integer in invalid form and makes it valid.
@@ -146,7 +152,7 @@ Integer& Integer::operator+=(Integer const& rhs) {
   
   for (SizeType i = 0; i < numDigits; ++i) {
     Digit lhsDigit = m_digits[i];
-Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : (rhsIsNegative * MAX_DIGIT);
+    Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : (rhsIsNegative * MAX_DIGIT);
     Digit minDigit = std::min(m_digits[i], rhs.m_digits[i]);
 
     m_digits[i] += rhs.m_digits[i] + hasCarry;
@@ -230,7 +236,9 @@ void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_o
     rhs.negate();
   }
   
-  for (Integer::SizeType i = lhs.m_digits.size() - 1; i >= 0; --i) {
+  Integer::SizeType i = lhs.m_digits.size();
+  do {
+    --i;
     currentDividend.m_digits.insert(currentDividend.m_digits.begin(), lhs.m_digits[i]);
     Integer::Digit currentQuotient;
     Integer::SizeType currentDividendNumDigits = currentDividend.m_digits.size();
@@ -267,7 +275,7 @@ void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_o
     }
     
     quot_out.m_digits[i] = currentQuotient;
-  }
+  } while (i != 0);
   
   rem_out = currentDividend;
   
@@ -322,13 +330,15 @@ bool aprn::operator<(Integer const& lhs, Integer const& rhs) {
   // All of the other digits are ordered in the expected order, which is:
   // 0 < 1 < 2 ... . Here, the digits are iterated through from most
   // significant to least significant.
-  for (Integer::SizeType i = lhs.m_digits.size() - 2; i >= 0; --i) {
+  Integer::SizeType i = lhs.m_digits.size() - 1;
+  do {
+    --i;
     Integer::Digit lhsDigit = lhs.m_digits[i];
     Integer::Digit rhsDigit = rhs.m_digits[i];
     if (lhsDigit != rhsDigit) {
       return lhsDigit < rhsDigit;
     }
-  }
+  } while (i != 0);
   
   // If we made it to here, then every digit was equal, meaning that the
   // left-hand side is not smaller than the right-hand side.
@@ -398,9 +408,18 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
     std::ios::fmtflags oldFlags = os.flags();
     os.unsetf(std::ios::showbase);
     os.unsetf(std::ios::showpos);
-    for (Integer::SizeType i = value.m_digits.size() - 1; i >= 0; --i) {
-      os << value.m_digits[i];
-    }
+    Integer::SizeType i = value.m_digits.size();
+    do {
+      --i;
+      std::stringstream nextDigitStream;
+      nextDigitStream.flags(os.flags());
+      if (i != value.m_digits.size() - 1) {
+        nextDigitStream << std::setw(sizeof(Integer::Digit) * 2);
+        nextDigitStream << std::setfill('0');
+      }
+      nextDigitStream << value.m_digits[i];
+      os << nextDigitStream.str();
+    } while (i != 0);
     os.flags(oldFlags);
   }
   
