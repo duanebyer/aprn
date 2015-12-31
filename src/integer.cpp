@@ -411,7 +411,7 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
     Integer::SizeType i = value.m_digits.size();
     do {
       --i;
-      std::stringstream nextDigitStream;
+      std::ostringstream nextDigitStream;
       nextDigitStream.flags(os.flags());
       if (i != value.m_digits.size() - 1) {
         nextDigitStream << std::setw(sizeof(Integer::Digit) * 2);

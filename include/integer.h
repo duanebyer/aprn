@@ -89,8 +89,8 @@ namespace aprn {
     //   The type used for the digit can be any unsigned integer type.
     
     // The type used for the digits of an integer.
-    using Digit = std::uint32_t;
-    using DoubleDigit = std::uint64_t;
+    using Digit = std::uint8_t;
+    using DoubleDigit = std::uint16_t;
     // This constant stores the maximum value a digit can have. This is
     // equal to the base minus 1.
     Digit static const MAX_DIGIT;
