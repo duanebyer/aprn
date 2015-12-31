@@ -50,7 +50,7 @@ Integer::Integer(unsigned long long val) {
   }
   if (m_digits.back() >= CRITICAL_DIGIT) {
     m_digits.push_back(0);
-  }
+y  }
   makeValid(*this);
 }
 
