@@ -14,7 +14,7 @@ using namespace aprn;
 void makeValid(Integer& val);
 
 Integer::Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
-Integer::Digit const Integer::CRITICAL_DIGIT = MAX_DIGIT / 2;
+Integer::Digit const Integer::CRITICAL_DIGIT = MAX_DIGIT / 2 + 1;
 
 Integer::Integer() {
   m_digits.push_back(0);
@@ -81,7 +81,7 @@ int aprn::signum(Integer const& val) {
   else {
     return
       (val.m_digits.back() < Integer::CRITICAL_DIGIT) -
-      (val.m_digits.back() > Integer::CRITICAL_DIGIT);
+      (val.m_digits.back() >= Integer::CRITICAL_DIGIT);
   }
 }
 
@@ -348,12 +348,7 @@ bool aprn::operator<(Integer const& lhs, Integer const& rhs) {
 std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
   int base = 10;
   int sign = signum(obj);
-  Integer value = sign < 0 ? -obj : obj;
-  std::string digits = "0123456789abcdef";
-  
-  if (os.flags() & std::ios::uppercase) {
-    std::transform(digits.begin(), digits.end(), digits.begin(), ::toupper);
-  }
+  std::string digits = "0123456789";
   
   switch (os.flags() & std::ios::basefield) {
   case std::ios::dec:
@@ -365,15 +360,6 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
   case std::ios::hex:
     base = 16;
     break;
-  }
-  
-  if (os.flags() & std::ios::showpos) {
-    if (sign >= 0) {
-      os << '+';
-    }
-  }
-  if (sign < 0) {
-    os << '-';
   }
   
   if ((os.flags() & std::ios::showbase) && sign != 0) {
@@ -389,7 +375,8 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
     os << '0';
   }
   else if (base == 10) {
-    std::string output = "";
+    std::string output = sign < 0 ? "-" : (os.flags() & std::ios::showpos ? "+" : "");
+    Integer value = sign < 0 ? -obj : obj;
     while (true) {
       if (value < Integer(base)) {
         output.push_back(digits[value.m_digits.front()]);
@@ -408,16 +395,15 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
     std::ios::fmtflags oldFlags = os.flags();
     os.unsetf(std::ios::showbase);
     os.unsetf(std::ios::showpos);
-    Integer::SizeType i = value.m_digits.size();
+    Integer::SizeType i = obj.m_digits.size();
     do {
       --i;
       std::ostringstream nextDigitStream;
       nextDigitStream.flags(os.flags());
-      if (i != value.m_digits.size() - 1) {
-        nextDigitStream << std::setw(sizeof(Integer::Digit) * 2);
-        nextDigitStream << std::setfill('0');
-      }
-      nextDigitStream << +value.m_digits[i];
+      nextDigitStream << +obj.m_digits[i];
+      // This will only be set for digits after the first.
+      nextDigitStream << std::setw(sizeof(Integer::Digit) * 2);
+      nextDigitStream << std::setfill('0');
       os << nextDigitStream.str();
     } while (i != 0);
     os.flags(oldFlags);
