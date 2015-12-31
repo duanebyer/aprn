@@ -376,7 +376,7 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
     os << '-';
   }
   
-  if (os.flags() & std::ios::showbase) {
+  if ((os.flags() & std::ios::showbase) && sign != 0) {
     if (base == 8) {
       os << '0';
     }
@@ -417,7 +417,7 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
         nextDigitStream << std::setw(sizeof(Integer::Digit) * 2);
         nextDigitStream << std::setfill('0');
       }
-      nextDigitStream << value.m_digits[i];
+      nextDigitStream << +value.m_digits[i];
       os << nextDigitStream.str();
     } while (i != 0);
     os.flags(oldFlags);
