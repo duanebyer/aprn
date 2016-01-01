@@ -153,14 +153,19 @@ Integer& Integer::operator+=(Integer const& rhs) {
   for (SizeType i = 0; i < numDigits; ++i) {
     Digit lhsDigit = m_digits[i];
     Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : (rhsIsNegative * MAX_DIGIT);
-    Digit minDigit = std::min(m_digits[i], rhs.m_digits[i]);
+    Digit maxDigit = std::max(lhsDigit, rhsDigit);
 
-    m_digits[i] += rhs.m_digits[i] + hasCarry;
-    hasCarry = m_digits[i] < minDigit;
+    m_digits[i] += rhsDigit + hasCarry;
+    hasCarry = m_digits[i] < maxDigit;
   }
   
   if (hasCarry) {
     m_digits.push_back(hasCarry + lhsIsNegative * MAX_DIGIT + rhsIsNegative * MAX_DIGIT);
+  }
+  
+  bool resultIsNegative = m_digits.back() >= CRITICAL_DIGIT;
+  if (lhsIsNegative == rhsIsNegative && lhsIsNegative != resultIsNegative) {
+    m_digits.push_back(lhsIsNegative * MAX_DIGIT);
   }
 
   makeValid(*this);
@@ -295,9 +300,7 @@ bool aprn::operator==(Integer const& lhs, Integer const& rhs) {
     return false;
   }
   for (Integer::SizeType i = 0; i < lhs.m_digits.size(); ++i) {
-    Integer::Digit lhsDigit = lhs.m_digits[i];
-    Integer::Digit rhsDigit = rhs.m_digits[i];
-    if (lhsDigit != rhsDigit) {
+    if (lhs.m_digits[i] != rhs.m_digits[i]) {
       return false;
     }
   }
