@@ -50,7 +50,7 @@ Integer::Integer(unsigned long long val) {
   }
   if (m_digits.back() >= CRITICAL_DIGIT) {
     m_digits.push_back(0);
-y  }
+  }
   makeValid(*this);
 }
 
@@ -134,7 +134,7 @@ Integer& Integer::operator--() {
     m_digits.push_back(MAX_DIGIT);
   }
   if (
-      lastBorrowIndex = m_digits.size() - 2 &&
+      lastBorrowIndex == m_digits.size() - 2 &&
       m_digits.back() == 0 &&
       m_digits[m_digits.size() - 2] == CRITICAL_DIGIT - 1) {
     m_digits.pop_back();
@@ -400,10 +400,9 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
       --i;
       std::ostringstream nextDigitStream;
       nextDigitStream.flags(os.flags());
-      nextDigitStream << +obj.m_digits[i];
-      // This will only be set for digits after the first.
       nextDigitStream << std::setw(sizeof(Integer::Digit) * 2);
       nextDigitStream << std::setfill('0');
+      nextDigitStream << +obj.m_digits[i];
       os << nextDigitStream.str();
     } while (i != 0);
     os.flags(oldFlags);
