@@ -1,6 +1,7 @@
 #include "../include/integer.h"
 
 #include <algorithm>
+#include <cstdint>
 #include <iomanip>
 #include <istream>
 #include <limits>
@@ -12,9 +13,15 @@
 using namespace aprn;
 
 void makeValid(Integer& val);
+bool isBigEndian();
+
+Integer& addMagnitude(Integer& lhs, Integer const& rhs);
+Integer& subtractMagnitude(Integer& lhs, Integer const& rhs);
+int compareMagnitude(Integer const& lhs, Integer const& rhs);
+
+Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result);
 
 Integer::Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
-Integer::Digit const Integer::CRITICAL_DIGIT = MAX_DIGIT / 2 + 1;
 
 Integer::Integer() {
   m_digits.push_back(0);
@@ -32,10 +39,15 @@ Integer::Integer(unsigned long val) : Integer((unsigned long long) val) {}
 Integer::Integer(signed long long val) {
   int bytes = sizeof(val);
   int bytesPerDigit = sizeof(Digit);
+  bool isNegative = val < 0;
   Digit* valPtr = reinterpret_cast<Digit*>(&val);
+  
+  val = isNegative ? -val : +val;
   m_digits.resize(bytes / bytesPerDigit);
+  m_isNegative = isNegative;
+  
   for (SizeType i = 0; i < m_digits.size(); ++i) {
-    m_digits[i] = valPtr[i];
+    m_digits[i] = valPtr[!isBigEndian() ? i : m_digits.size() - i - 1];
   }
   makeValid(*this);
 }
@@ -44,45 +56,34 @@ Integer::Integer(unsigned long long val) {
   int bytes = sizeof(val);
   int bytesPerDigit = sizeof(Digit);
   Digit* valPtr = reinterpret_cast<Digit*>(&val);
+  
   m_digits.resize(bytes / bytesPerDigit);
+  m_isNegative = false;
+  
   for (SizeType i = 0; i < m_digits.size(); ++i) {
-    m_digits[i] = valPtr[i];
-  }
-  if (m_digits.back() >= CRITICAL_DIGIT) {
-    m_digits.push_back(0);
+    m_digits[i] = valPtr[!isBigEndian() ? i : m_digits.size() - i - 1];
   }
   makeValid(*this);
 }
 
 // Takes an integer in invalid form and makes it valid.
 void makeValid(Integer& val) {
-  bool validForm = false;
-  while(!validForm && val.m_digits.size() >= 2) {
-    if (
-        val.m_digits.back() == Integer::MAX_DIGIT &&
-        val.m_digits[val.m_digits.size() - 2] >= Integer::CRITICAL_DIGIT) {
-      val.m_digits.pop_back();
-    }
-    else if (
-             val.m_digits.back() == 0 &&
-             val.m_digits[val.m_digits.size() - 2] < Integer::CRITICAL_DIGIT) {
-      val.m_digits.pop_back();
-    }
-    else {
-      validForm = true;
-    }
+  while (val.m_digits.size() != 0 && val.m_digits.back() == 0) {
+    val.m_digits.pop_back();
   }
+  val.m_isNegative = val.m_isNegative && (val.m_digits.size() != 0);
+}
+
+bool isBigEndian() {
+  union {
+    std::uint32_t i;
+    char c[4];
+  } x = { 0x01020304 };
+  return x.c[0] == 1;
 }
 
 int aprn::signum(Integer const& val) {
-  if (val.m_digits.size() == 1 && val.m_digits.front() == 0) {
-    return 0;
-  }
-  else {
-    return
-      (val.m_digits.back() < Integer::CRITICAL_DIGIT) -
-      (val.m_digits.back() >= Integer::CRITICAL_DIGIT);
-  }
+  return (val.m_digits.size() != 0) * (1 - 2 * val.m_isNegative);
 }
 
 Integer Integer::operator-() const {
@@ -91,113 +92,158 @@ Integer Integer::operator-() const {
 }
 
 Integer& Integer::negate() {
-  for (SizeType i = 0; i < m_digits.size(); ++i) {
-    m_digits[i] = ~m_digits[i];
-  }
-  operator++();
-  return *this;      
+  m_isNegative = !m_isNegative && (m_digits.size() != 0);
+  return *this;
 }
 
 Integer& Integer::operator++() {
-  bool hasCarry = false;
-  SizeType lastCarryIndex;
-  for (SizeType i = 0; i < m_digits.size(); ++i) {
-    hasCarry = (++m_digits[i] == 0);
-    lastCarryIndex = i;
-    if (!hasCarry) {
-      break;
+  switch (m_isNegative) {
+  case true:
+    negate();
+    operator--();
+    negate();
+    break;
+  case false:
+    bool hasCarry = true;
+    for (SizeType i = 0; i < m_digits.size(); ++i) {
+      if (hasCarry) {
+        hasCarry = (++m_digits[i] == 0);
+      }
+      else {
+        break;
+      }
     }
-  }
-  if (lastCarryIndex == m_digits.size() - 1 && m_digits.back() == CRITICAL_DIGIT) {
-    m_digits.push_back(0);
-  }
-  if (
-      lastCarryIndex == m_digits.size() - 2 &&
-      m_digits.back() == MAX_DIGIT &&
-      m_digits[m_digits.size() - 2] == CRITICAL_DIGIT) {
-    m_digits.pop_back();
+    if (hasCarry) {
+      m_digits.push_back(1);
+    }
+    break;
   }
   return *this;
 }
 
 Integer& Integer::operator--() {
-  bool hasBorrow = false;
-  SizeType lastBorrowIndex;
-  for (SizeType i = 0; i < m_digits.size(); ++i) {
-    hasBorrow = (--m_digits[i] == MAX_DIGIT);
-    lastBorrowIndex = i;
-    if (!hasBorrow) {
-      break;
+  switch (m_isNegative) {
+  case true:
+    negate();
+    operator++();
+    negate();
+    break;
+  case false:
+    bool hasBorrow = true;
+    for (SizeType i = 0; i < m_digits.size(); ++i) {
+      if (hasBorrow) {
+        hasBorrow = (--m_digits[i] == MAX_DIGIT);
+      }
+      else {
+        break;
+      }
     }
-  }
-  if (lastBorrowIndex == m_digits.size() - 1 && m_digits.back() == CRITICAL_DIGIT - 1) {
-    m_digits.push_back(MAX_DIGIT);
-  }
-  if (
-      lastBorrowIndex == m_digits.size() - 2 &&
-      m_digits.back() == 0 &&
-      m_digits[m_digits.size() - 2] == CRITICAL_DIGIT - 1) {
-    m_digits.pop_back();
+    if (hasBorrow) {
+      m_isNegative = true;
+      m_digits.push_back(1);
+    }
+    break;
   }
   return *this;
 }
 
 Integer& Integer::operator+=(Integer const& rhs) {
-  SizeType numDigits = std::max(m_digits.size(), rhs.m_digits.size());
-  bool lhsIsNegative = m_digits.back() >= CRITICAL_DIGIT;
-  bool rhsIsNegative = rhs.m_digits.back() >= CRITICAL_DIGIT;
+  if (m_isNegative == rhs.m_isNegative) {
+    return addMagnitude(*this, rhs);
+  }
+  else {
+    return subtractMagnitude(*this, rhs);
+  }
+}
+
+Integer& addMagnitude(Integer& lhs, Integer const& rhs) {
+  Integer::SizeType numDigits = std::max(lhs.m_digits.size(), rhs.m_digits.size());
   bool hasCarry = false;
-  
-  m_digits.resize(numDigits, lhsIsNegative * MAX_DIGIT);
-  
-  for (SizeType i = 0; i < numDigits; ++i) {
-    Digit lhsDigit = m_digits[i];
-    Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : (rhsIsNegative * MAX_DIGIT);
-    Digit maxDigit = std::max(lhsDigit, rhsDigit);
-
-    m_digits[i] += rhsDigit + hasCarry;
-    hasCarry = m_digits[i] < maxDigit;
+  lhs.m_digits.resize(numDigits, 0);
+  for (Integer::SizeType i = 0; i < numDigits; ++i) {
+    Integer::Digit lhsDigit = lhs.m_digits[i];
+    Integer::Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : 0;
+    Integer::Digit maxDigit = std::max(lhsDigit, rhsDigit);
+    
+    lhs.m_digits[i] += rhsDigit + hasCarry;
+    hasCarry = (!hasCarry && lhs.m_digits[i] < maxDigit) ||
+      (hasCarry && lhs.m_digits[i] <= maxDigit);
   }
-  
   if (hasCarry) {
-    m_digits.push_back(hasCarry + lhsIsNegative * MAX_DIGIT + rhsIsNegative * MAX_DIGIT);
+    lhs.m_digits.push_back(1);
   }
-  
-  bool resultIsNegative = m_digits.back() >= CRITICAL_DIGIT;
-  if (lhsIsNegative == rhsIsNegative && lhsIsNegative != resultIsNegative) {
-    m_digits.push_back(lhsIsNegative * MAX_DIGIT);
+  return lhs;
+}
+
+Integer& Integer::operator-=(Integer const& rhs) {
+  if (m_isNegative == rhs.m_isNegative) {
+    return subtractMagnitude(*this, rhs);
   }
+  else {
+    return addMagnitude(*this, rhs);
+  }
+}
 
-  makeValid(*this);
-
-  return *this;
+Integer& subtractMagnitude(Integer& lhs, Integer const& rhs) {
+  int compMag = compareMagnitude(lhs, rhs);
+  Integer::SizeType numDigits = std::max(lhs.m_digits.size(), rhs.m_digits.size());
+  bool hasBorrow = false;
+  lhs.m_digits.resize(numDigits, 0);
+  if (compMag == 0) {
+    lhs.m_digits.clear();
+    lhs.m_isNegative = false;
+    return lhs;
+  }
+  for (Integer::SizeType i = 0; i < numDigits; ++i) {
+    Integer::Digit lhsDigit = lhs.m_digits[i];
+    Integer::Digit rhsDigit = i < rhs.m_digits.size() ? rhs.m_digits[i] : 0;
+    
+    lhs.m_digits[i] = (lhsDigit - rhsDigit) * compMag - hasBorrow;
+    Integer::Digit compDigit = (compMag > 0) * lhsDigit + (compMag < 0) * rhsDigit;
+    hasBorrow = (!hasBorrow && lhs.m_digits[i] > compDigit) ||
+      (hasBorrow && lhs.m_digits[i] >= compDigit);
+  }
+  if (compMag < 0) {
+    lhs.m_isNegative = !lhs.m_isNegative;
+  }
+  makeValid(lhs);
+  return lhs;
 }
 
 Integer& Integer::operator*=(Integer const& rhs) {
-  Integer lhs(*this);
-  Digit carry = 0;
+  return multiply(Integer(*this), rhs, *this);
+}
+
+Integer aprn::operator*(Integer const& lhs, Integer const& rhs) {
+  Integer result = Integer();
+  return multiply(lhs, rhs, result);
+}
+
+
+Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result) {
+  Integer::Digit carry = 0;
   
-  m_digits.clear();
-  m_digits.push_back(0);
+  result.m_digits.clear();
+  result.m_isNegative = false;
   
-  for (SizeType i = 0; i < rhs.m_digits.size(); ++i) {
-    Digit rhsDigit = rhs.m_digits[i];
+  for (Integer::SizeType i = 0; i < rhs.m_digits.size(); ++i) {
+    Integer::Digit rhsDigit = rhs.m_digits[i];
     Integer nextSum;
     nextSum.m_digits.resize(i, 0);
     carry = 0;
-    for (SizeType j = 0; j < lhs.m_digits.size(); ++j) {
-      Digit lhsDigit = lhs.m_digits[j];
-      DoubleDigit digitProduct = lhsDigit * rhsDigit + carry;
-      carry = reinterpret_cast<Digit*>(&digitProduct)[0];
-      nextSum.m_digits.push_back(reinterpret_cast<Digit*>(&digitProduct)[1]);
+    for (Integer::SizeType j = 0; j < lhs.m_digits.size(); ++j) {
+      Integer::Digit lhsDigit = lhs.m_digits[j];
+      Integer::DoubleDigit digitProduct = lhsDigit * rhsDigit + carry;
+      carry = reinterpret_cast<Integer::Digit*>(&digitProduct)[isBigEndian() ? 0 : 1];
+      nextSum.m_digits.push_back(reinterpret_cast<Integer::Digit*>(&digitProduct)[isBigEndian() ? 1 : 0]);
     }
     nextSum.m_digits.push_back(carry);
-    operator+=(nextSum);
+    result += nextSum;
   }
   
-  makeValid(*this);
+  makeValid(result);
   
-  return *this;
+  return result;
 }
 
 Integer& Integer::operator/=(Integer const& rhs) {
@@ -296,56 +342,48 @@ void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_o
 }
 
 bool aprn::operator==(Integer const& lhs, Integer const& rhs) {
-  if (lhs.m_digits.size() != rhs.m_digits.size()) {
+  if (lhs.m_isNegative != rhs.m_isNegative) {
     return false;
   }
-  for (Integer::SizeType i = 0; i < lhs.m_digits.size(); ++i) {
-    if (lhs.m_digits[i] != rhs.m_digits[i]) {
-      return false;
-    }
+  else {
+    return compareMagnitude(lhs, rhs) == 0;
   }
-  return true;
 }
 
 bool aprn::operator<(Integer const& lhs, Integer const& rhs) {
-  int lhsSignum = signum(lhs);
-  int rhsSignum = signum(rhs);
-  
-  if (lhs.m_digits.size() != rhs.m_digits.size()) {
-    return lhsSignum * lhs.m_digits.size() < rhsSignum * rhs.m_digits.size();
+  if (lhs.m_isNegative != rhs.m_isNegative) {
+    return lhs.m_isNegative;
   }
-  
-  Integer::Digit lhsSignDigit = lhs.m_digits.back();
-  Integer::Digit rhsSignDigit = rhs.m_digits.back();
-    
-  // The most significant digit is the sign digit, which is ordered in a
-  // different order than the rest of the digits. For example, if the sign
-  // digit was in base 8:   4 < 5 < 6 < 7 < 0 < 1 < 2 < 3.
-  if (lhsSignDigit != rhsSignDigit) {
-    // This complicated boolean expression is just comparing the sign digit
-    // based on the above ordering.
-    bool hasSameSign = (lhsSignum == rhsSignum);
-    return
-      (!hasSameSign && (lhsSignum < rhsSignum)) ||
-      (hasSameSign && (lhsSignDigit < rhsSignDigit));
+  else {
+    return compareMagnitude(lhs, rhs) == -signum(lhs);
   }
-  
-  // All of the other digits are ordered in the expected order, which is:
-  // 0 < 1 < 2 ... . Here, the digits are iterated through from most
-  // significant to least significant.
-  Integer::SizeType i = lhs.m_digits.size() - 1;
-  do {
-    --i;
-    Integer::Digit lhsDigit = lhs.m_digits[i];
-    Integer::Digit rhsDigit = rhs.m_digits[i];
-    if (lhsDigit != rhsDigit) {
-      return lhsDigit < rhsDigit;
-    }
-  } while (i != 0);
-  
-  // If we made it to here, then every digit was equal, meaning that the
-  // left-hand side is not smaller than the right-hand side.
-  return false;
+}
+
+int compareMagnitude(Integer const& lhs, Integer const& rhs) {
+  if (lhs.m_digits.size() > rhs.m_digits.size()) {
+    return 1;
+  }
+  else if (lhs.m_digits.size() < rhs.m_digits.size()) {
+    return -1;
+  }
+  else if (lhs.m_digits.size() == 0) {
+    return 0;
+  }
+  else {
+    Integer::SizeType i = lhs.m_digits.size();
+    do {
+      --i;
+      Integer::Digit lhsDigit = lhs.m_digits[i];
+      Integer::Digit rhsDigit = rhs.m_digits[i];
+      if (lhsDigit > rhsDigit) {
+        return 1;
+      }
+      else if (lhsDigit < rhsDigit) {
+        return -1;
+      }
+    } while (i != 0);
+    return 0;
+  }
 }
 
 std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
@@ -395,6 +433,7 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
     os << output;
   }
   else {
+    os << (sign < 0 ? "-" : (os.flags() & std::ios::showpos ? "+" : ""));
     std::ios::fmtflags oldFlags = os.flags();
     os.unsetf(std::ios::showbase);
     os.unsetf(std::ios::showpos);
@@ -420,3 +459,4 @@ std::istream& aprn::operator>>(std::istream& is, Integer& obj) {
   }
   return is;
 }
+

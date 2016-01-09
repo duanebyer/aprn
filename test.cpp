@@ -10,28 +10,34 @@ int main(int argc, char** argv) {
   int num_wrong = 0;
   std::cout << std::setbase(16);
   std::srand(std::time(0));
-  for (int i = 0; i < 1000000; ++i) {
+  int num_tests = 100000000;
+  for (int i = 0; i < num_tests; ++i) {
     
-    long long int_a = std::rand();
-    long long int_b = std::rand();
-    long long int_sum = int_a + int_b;
+    if (i % (num_tests / 100) == 0) {
+      std::cout << std::setbase(10);
+      std::cout << i / (num_tests / 100) << "%\n";
+      std::cout << std::setbase(16);
+    }
+    
+    long long int_a = std::rand();// - RAND_MAX / 2;
+    long long int_b = std::rand();// - RAND_MAX / 2;
+    long long int_result = int_a - int_b;
     
     Integer integer_a = Integer(int_a);
     Integer integer_b = Integer(int_b);
     
-    Integer integer_predicted_sum = integer_a + integer_b;
-    Integer integer_sum = Integer(int_sum);
+    Integer integer_predicted_result = integer_a - integer_b;
+    Integer integer_result = Integer(int_result);
     
-    /*if (integer_predicted_sum.m_digits.size() != integer_sum.m_digits.size()) {
-      std::cout << "sizes are different\n";
-      Integer new_integer_sum = Integer(int_sum);
-      }*/
-    
-    if (integer_sum != integer_predicted_sum) {
-      std::cout << "WRONG, should be " << int_sum << ": \n";
-      std::cout << '\t' << integer_a << " + " << integer_b << " = " << integer_predicted_sum << '\n';
+    if (integer_result == integer_predicted_result) {
+      //std::cout << '\t';
+    }
+    else {
+      std::cout << "Should be " << integer_result << ": ";
+      std::cout << integer_a << " + " << integer_b << " = " << integer_predicted_result << '\n';
       ++num_wrong;
     }
+    //std::cout << integer_a << " + " << integer_b << " = " << integer_predicted_result << '\n';
   }
   std::cout << std::setbase(10);
   std::cout << "number of incorrect sums: " <<  num_wrong << '\n';

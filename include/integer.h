@@ -52,40 +52,19 @@ namespace aprn {
     }
 
     Integer& operator+=(Integer const& rhs);
+    Integer& operator-=(Integer const& rhs);
     Integer& operator*=(Integer const& rhs);
     Integer& operator/=(Integer const& rhs);
     Integer& operator%=(Integer const& rhs);
-
-    Integer& operator-=(Integer const& rhs) {
-      operator+=(-rhs);
-      return *this;
-    }
 
     //private:
 
     // Implementation Details
     // ----------------------
-    //   An Integer is represented by a vector of digits in complement form (similar
-    // to two's complement, but for an arbitrary power-of-two base). If the most
-    // significant digit is smaller than half of the base, the integer is positive,
-    // otherwise it is negative. If there are no digits at all, the integer is zero.
-    // To negate an integer, each digit must be replaced with its complement, and
-    // one must be added to the result.
-    //   Each integer is guaranteed to have a unique representation as a string of
-    // digits satisfying the following constraints (where b is the base).
-    //   1) The representation of '0' is the single digit 0. All other strings that
-    //      would evaluate to 0 are invalid.
-    //        invalid base-8 examples: '000', '70'
-    //        fixed base-8 examples:     '0',  '0'
-    //   2) If the most significant digit is a 0, then the second-most significant
-    //      digit must be larger or equal to b/2.
-    //        invalid base-8 examples: '03', '017', '023', '004', '0005'
-    //        fixed base-8 examples:    '3',  '17',  '23',  '04',   '05'
-    //   3) If the most significant digit is b-1, then the second-most significant
-    //      digit must be smaller than b/2.
-    //        invalid base-8 examples: '75', '763', '772', '7771'
-    //        fixed base-8 examples:    '5',  '63',  '72',   '71'
-    //
+    //   An Integer is represented by a vector of digits and a sign which can be
+    // positive or negative. A non-zero integer is in valid form if it has no
+    // leading digits with the value of zero. The unique representation of zero
+    // is an empty digit vector with a positive sign.
     //   The type used for the digit can be any unsigned integer type.
     
     // The type used for the digits of an integer.
@@ -94,12 +73,10 @@ namespace aprn {
     // This constant stores the maximum value a digit can have. This is
     // equal to the base minus 1.
     Digit static const MAX_DIGIT;
-    // This constant stores the particular value such that if the most
-    // significant digit is larger than this value, the integer is
-    // negative, and if it is smaller, then the integer is positive.
-    Digit static const CRITICAL_DIGIT;
     // The string of digits that represents the integer.
     std::vector<Digit> m_digits;
+    // The sign of the integer.
+    bool m_isNegative;
     // The size type of the vector.
     using SizeType = decltype(m_digits)::size_type;
 
@@ -135,18 +112,9 @@ namespace aprn {
     lhs -= rhs;
     return lhs;
   }
-  inline Integer operator*(Integer lhs, Integer const& rhs) {
-    lhs *= rhs;
-    return lhs;
-  }
-  inline Integer operator/(Integer lhs, Integer const& rhs) {
-    lhs /= rhs;
-    return lhs;
-  }
-  inline Integer operator%(Integer lhs, Integer const& rhs) {
-    lhs %= rhs;
-    return lhs;
-  }
+  Integer operator*(Integer const& lhs, Integer const& rhs);
+  Integer operator/(Integer const& lhs, Integer const& rhs);
+  Integer operator%(Integer const& lhs, Integer const& rhs);
 
 }
 
