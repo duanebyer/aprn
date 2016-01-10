@@ -19,7 +19,7 @@ Integer& addMagnitude(Integer& lhs, Integer const& rhs);
 Integer& subtractMagnitude(Integer& lhs, Integer const& rhs);
 int compareMagnitude(Integer const& lhs, Integer const& rhs);
 
-Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result);
+Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result_out);
 
 Integer::Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
 
@@ -90,6 +90,14 @@ int aprn::signum(Integer const& val) {
 Integer Integer::operator-() const {
   Integer result(*this);
   return result.negate();
+}
+
+Integer const& Integer::operator+() const {
+  return *this;
+}
+
+Integer& Integer::operator+() {
+  return *this;
 }
 
 Integer& Integer::negate() {
@@ -221,11 +229,11 @@ Integer aprn::operator*(Integer const& lhs, Integer const& rhs) {
 }
 
 
-Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result) {
+Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result_out) {
   Integer::Digit carry = 0;
   
-  result.m_digits.clear();
-  result.m_isNegative = false;
+  result_out.m_digits.clear();
+  result_out.m_isNegative = false;
   
   for (Integer::SizeType i = 0; i < rhs.m_digits.size(); ++i) {
     Integer::Digit rhsDigit = rhs.m_digits[i];
@@ -240,56 +248,58 @@ Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result) {
     }
     nextSum.m_digits.push_back(carry);
     makeValid(nextSum);
-    result += nextSum;
+    result_out += nextSum;
   }
   
-  result.m_isNegative = lhs.m_isNegative ^ rhs.m_isNegative;
+  result_out.m_isNegative = lhs.m_isNegative ^ rhs.m_isNegative;
   
-  makeValid(result);
+  makeValid(result_out);
   
-  return result;
+  return result_out;
 }
 
 Integer& Integer::operator/=(Integer const& rhs) {
-  Integer lhs(*this);
-  Integer blank = Integer();
-  quotRem(lhs, rhs, *this, blank);
+  Integer rem = Integer();
+  quotRem(Integer(*this), rhs, *this, rem);
   return *this;
+}
+
+Integer aprn::operator/(Integer const& lhs, Integer const& rhs) {
+  Integer quot = Integer();
+  Integer rem = Integer();
+  quotRem(lhs, rhs, quot, rem);
+  return quot;
 }
 
 Integer& Integer::operator%=(Integer const& rhs) {
-  Integer lhs(*this);
-  Integer blank = Integer();
-  quotRem(lhs, rhs, blank, *this);
+  Integer quot = Integer();
+  quotRem(Integer(*this), rhs, quot, *this);
   return *this;
 }
 
-void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_out, Integer& rem_out) {
-  if (lhsRef < rhsRef) {
+Integer aprn::operator%(Integer const& lhs, Integer const& rhs) {
+  Integer quot = Integer();
+  Integer rem = Integer();
+  quotRem(lhs, rhs, quot, rem);
+  return rem;
+}
+
+bool aprn::quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out) {
+  if (lhs < rhs) {
     quot_out = Integer();
-    rem_out = Integer(lhsRef);
+    rem_out = Integer(lhs);
   }
   
-  int lhsSign = signum(lhsRef);
-  int rhsSign = signum(rhsRef);
+  int lhsSign = signum(lhs);
+  int rhsSign = signum(rhs);
   int quotSign = lhsSign * rhsSign;
-  Integer currentDividend;
+  Integer currentDividend = Integer();
   
-  if (signum(rhsRef) == 0) {
-    return;
+  if (signum(rhs) == 0) {
+    return false;
   }
   
-  quot_out.m_digits.resize(lhsRef.m_digits.size(), (quotSign < 0) * Integer::MAX_DIGIT);
-  
-  Integer lhs = Integer(lhsRef);
-  Integer rhs = Integer(rhsRef);
-  
-  if (lhsSign < 0) {
-    lhs.negate();
-  }
-  if (rhsSign < 0) {
-    rhs.negate();
-  }
+  quot_out.m_digits.resize(lhs.m_digits.size(), 0);
   
   Integer::SizeType i = lhs.m_digits.size();
   do {
@@ -301,28 +311,27 @@ void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_o
     if (currentDividendNumDigits < rhsNumDigits) {
       currentQuotient = 0;
     }
-    else if (currentDividendNumDigits >= rhsNumDigits) {
-      Integer::Digit* dividendEndPtr =
-        reinterpret_cast<Integer::Digit*>(currentDividend.m_digits[currentDividendNumDigits - 1]);
-      Integer::DoubleDigit dividendEnd, rhsEnd;
+    else {
+      Integer::Digit const* dividendEndPtr = &currentDividend.m_digits.back();
+      Integer::DoubleDigit rhsEnd = rhs.m_digits.back();
+      Integer::DoubleDigit dividendEnd;
       if (currentDividendNumDigits == rhsNumDigits) {
         dividendEnd = *dividendEndPtr;
       }
       else {
-        dividendEnd = *reinterpret_cast<Integer::DoubleDigit*>(dividendEndPtr);
+        dividendEnd = *reinterpret_cast<Integer::DoubleDigit const*>(dividendEndPtr);
       }
-      rhsEnd = *reinterpret_cast<Integer::Digit*>(rhs.m_digits[rhsNumDigits - 1]);
       currentQuotient = dividendEnd / (rhsEnd + 1);
       Integer quotientProduct = rhs * currentQuotient;
       
-      for (Integer::Digit quotient = currentQuotient + 1; quotient <= Integer::MAX_DIGIT; ++quotient) {
-        Integer nextQuotientProduct = rhs * (long long unsigned) quotient;
+      for (Integer::DoubleDigit quotient = currentQuotient + 1; quotient <= Integer::MAX_DIGIT; ++quotient) {
+        Integer nextQuotientProduct = rhs * quotient;
         if (nextQuotientProduct > currentDividend) {
           break;
         }
         else {
           quotientProduct = nextQuotientProduct;
-          currentQuotient = i;
+          currentQuotient = quotient;
         }
       }
       
@@ -343,6 +352,7 @@ void aprn::quotRem(Integer const& lhsRef, Integer const& rhsRef, Integer& quot_o
       quot_out -= rhs;
     }
   }
+  return true;
 }
 
 bool aprn::operator==(Integer const& lhs, Integer const& rhs) {
