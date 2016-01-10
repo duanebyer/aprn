@@ -24,7 +24,6 @@ Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result_out);
 Integer::Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
 
 Integer::Integer() {
-  m_digits.push_back(0);
   m_isNegative = false;
 }
 
@@ -312,20 +311,22 @@ bool aprn::quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, In
       currentQuotient = 0;
     }
     else {
-      Integer::Digit const* dividendEndPtr = &currentDividend.m_digits.back();
       Integer::DoubleDigit rhsEnd = rhs.m_digits.back();
       Integer::DoubleDigit dividendEnd;
       if (currentDividendNumDigits == rhsNumDigits) {
-        dividendEnd = *dividendEndPtr;
+        dividendEnd = currentDividend.m_digits.back();
       }
       else {
-        dividendEnd = *reinterpret_cast<Integer::DoubleDigit const*>(dividendEndPtr);
+        dividendEnd = currentDividend.m_digits.back() * ((Integer::DoubleDigit) Integer::MAX_DIGIT + 1);
+        dividendEnd += currentDividend.m_digits[currentDividendNumDigits - 2];
       }
       currentQuotient = dividendEnd / (rhsEnd + 1);
       Integer quotientProduct = rhs * currentQuotient;
+      quotientProduct.m_isNegative = false;
       
       for (Integer::DoubleDigit quotient = currentQuotient + 1; quotient <= Integer::MAX_DIGIT; ++quotient) {
         Integer nextQuotientProduct = rhs * quotient;
+        nextQuotientProduct.m_isNegative = false;
         if (nextQuotientProduct > currentDividend) {
           break;
         }
@@ -346,11 +347,11 @@ bool aprn::quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, In
   makeValid(quot_out);
   makeValid(rem_out);
   
-  if (quotSign == -quotSign) {
+  if (quotSign == -1) {
     quot_out.negate();
-    if (signum(rem_out) != 0) {
-      quot_out -= rhs;
-    }
+  }
+  if (lhsSign == -1) {
+    rem_out.negate();
   }
   return true;
 }
