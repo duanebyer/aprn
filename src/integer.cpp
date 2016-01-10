@@ -25,6 +25,7 @@ Integer::Digit const Integer::MAX_DIGIT = std::numeric_limits<Digit>::max();
 
 Integer::Integer() {
   m_digits.push_back(0);
+  m_isNegative = false;
 }
 
 Integer::Integer(signed char val) : Integer((signed long long) val) {}
@@ -238,8 +239,11 @@ Integer& multiply(Integer const& lhs, Integer const& rhs, Integer& result) {
       nextSum.m_digits.push_back(reinterpret_cast<Integer::Digit*>(&digitProduct)[isBigEndian() ? 1 : 0]);
     }
     nextSum.m_digits.push_back(carry);
+    makeValid(nextSum);
     result += nextSum;
   }
+  
+  result.m_isNegative = lhs.m_isNegative ^ rhs.m_isNegative;
   
   makeValid(result);
   
