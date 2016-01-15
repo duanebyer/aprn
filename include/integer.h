@@ -46,6 +46,20 @@ namespace aprn {
     Integer(signed long long val);
     Integer(unsigned long long val);
     
+    explicit inline operator bool() const {
+      return m_digits.size() != 0;
+    }
+    explicit operator signed char() const;
+    explicit operator unsigned char() const;
+    explicit operator signed short() const;
+    explicit operator unsigned short() const;
+    explicit operator signed int() const;
+    explicit operator unsigned int() const;
+    explicit operator signed long() const;
+    explicit operator unsigned long() const;
+    explicit operator signed long long() const;
+    explicit operator unsigned long long() const;
+    
     Integer operator-() const;
     Integer const& operator+() const;
     Integer& operator+();

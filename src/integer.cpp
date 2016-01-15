@@ -30,25 +30,12 @@ Integer::Integer(unsigned int val) : Integer((unsigned long long) val) {}
 Integer::Integer(signed long val) : Integer((signed long long) val) {}
 Integer::Integer(unsigned long val) : Integer((unsigned long long) val) {}
 
-Integer::Integer(signed long long val) {
-  int bytes = sizeof(val);
-  int bytesPerDigit = sizeof(Digit);
-  bool isNegative = val < 0;
-  Digit* valPtr = reinterpret_cast<Digit*>(&val);
-  
-  val = isNegative ? -val : +val;
-  m_digits.resize(bytes / bytesPerDigit);
-  m_isNegative = isNegative;
-  
-  for (SizeType i = 0; i < m_digits.size(); ++i) {
-    m_digits[i] = valPtr[!isBigEndian() ? i : m_digits.size() - i - 1];
-  }
-  makeValid();
-}
+Integer::Integer(signed long long val)
+  : Integer((unsigned long long) (std::abs(val))) { }
 
 Integer::Integer(unsigned long long val) {
-  int bytes = sizeof(val);
-  int bytesPerDigit = sizeof(Digit);
+  std::size_t bytes = sizeof(val);
+  std::size_t bytesPerDigit = sizeof(Digit);
   Digit* valPtr = reinterpret_cast<Digit*>(&val);
   
   m_digits.resize(bytes / bytesPerDigit);
@@ -58,6 +45,35 @@ Integer::Integer(unsigned long long val) {
     m_digits[i] = valPtr[!isBigEndian() ? i : m_digits.size() - i - 1];
   }
   makeValid();
+}
+
+Integer::operator signed char() const { return (signed char) operator signed long long(); }
+Integer::operator unsigned char() const { return (unsigned char) operator unsigned long long(); }
+Integer::operator signed short() const { return (signed short) operator signed long long(); }
+Integer::operator unsigned short() const { return (unsigned short) operator unsigned long long(); }
+Integer::operator signed int() const { return (signed int) operator signed long long(); }
+Integer::operator unsigned int() const { return (unsigned int) operator unsigned long long(); }
+Integer::operator signed long() const { return (signed long) operator signed long long(); }
+Integer::operator unsigned long() const { return (unsigned long) operator unsigned long long(); }
+
+Integer::operator signed long long() const {
+  unsigned long long val = operator unsigned long long();
+  val %= LLONG_MAX;
+  val = m_isNegative ? -val : val;
+  return val;
+}
+
+Integer::operator unsigned long long() const {
+  unsigned long long result = 0;
+  std::size_t numDigits = sizeof(unsigned long long) / sizeof(Digit) +
+    ((sizeof(signed long long) % sizeof(Digit)) != 0);
+  numDigits = std::min(numDigits, m_digits.size());
+  for (std::size_t i = 0; i < numDigits; ++i) {
+    unsigned long long digit = (unsigned long long) m_digits[i];
+    digit <<= CHAR_BIT * sizeof(Digit) * i;
+    result |= digit;
+  }
+  return result;
 }
 
 // Takes an integer in invalid form and makes it valid.
