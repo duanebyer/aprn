@@ -4,10 +4,13 @@
 #include <cstdint>
 #include <istream>
 #include <ostream>
+#include <type_traits>
 #include <vector>
 
 namespace aprn {
-
+  
+  template<typename T> struct div_result;
+  
   class Integer {
     
     // The type used for the digits of an integer.
@@ -27,10 +30,12 @@ namespace aprn {
     friend std::ostream& operator<<(std::ostream& os, Integer const& obj);
     friend std::istream& operator>>(std::istream& is, Integer& obj);
     
-    friend int signum(Integer const& val);
-    friend bool quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out);
     friend bool operator==(Integer const& lhs, Integer const& rhs);
     friend bool operator<(Integer const& lhs, Integer const& rhs);
+    
+    friend int signum(Integer const& val);
+    friend Integer abs(Integer val);
+    friend div_result<Integer> div(Integer const& lhs, Integer const& rhs);
     
   public:
     
@@ -128,8 +133,6 @@ namespace aprn {
   };
   
   int signum(Integer const& val);
-  bool quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out);
-  
   bool operator==(Integer const& lhs, Integer const& rhs);
   bool operator<(Integer const& lhs, Integer const& rhs);
   

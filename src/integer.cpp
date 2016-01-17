@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "../include/math_integer.h"
+
 using namespace aprn;
 
 bool isBigEndian();
@@ -30,8 +32,9 @@ Integer::Integer(unsigned int val) : Integer((unsigned long long) val) {}
 Integer::Integer(signed long val) : Integer((signed long long) val) {}
 Integer::Integer(unsigned long val) : Integer((unsigned long long) val) {}
 
-Integer::Integer(signed long long val)
-  : Integer((unsigned long long) (std::abs(val))) { }
+Integer::Integer(signed long long val) : Integer((unsigned long long) (std::abs(val))) {
+  m_isNegative = val < 0;
+}
 
 Integer::Integer(unsigned long long val) {
   std::size_t bytes = sizeof(val);
@@ -57,19 +60,19 @@ Integer::operator signed long() const { return (signed long) operator signed lon
 Integer::operator unsigned long() const { return (unsigned long) operator unsigned long long(); }
 
 Integer::operator signed long long() const {
-  unsigned long long val = operator unsigned long long();
-  val %= LLONG_MAX;
+  std::uintmax_t val = operator std::uintmax_t();
+  val %= INTMAX_MAX;
   val = m_isNegative ? -val : val;
   return val;
 }
 
 Integer::operator unsigned long long() const {
-  unsigned long long result = 0;
-  std::size_t numDigits = sizeof(unsigned long long) / sizeof(Digit) +
-    ((sizeof(signed long long) % sizeof(Digit)) != 0);
+  std::uintmax_t result = 0;
+  std::size_t numDigits = sizeof(std::uintmax_t) / sizeof(Digit) +
+    ((sizeof(std::uintmax_t) % sizeof(Digit)) != 0);
   numDigits = std::min(numDigits, m_digits.size());
   for (std::size_t i = 0; i < numDigits; ++i) {
-    unsigned long long digit = (unsigned long long) m_digits[i];
+    std::uintmax_t digit = (std::uintmax_t) m_digits[i];
     digit <<= CHAR_BIT * sizeof(Digit) * i;
     result |= digit;
   }
@@ -90,10 +93,6 @@ bool isBigEndian() {
     char c[4];
   } x = { 0x01020304 };
   return x.c[0] == 1;
-}
-
-int aprn::signum(Integer const& val) {
-  return (val.m_digits.size() != 0) * (1 - 2 * val.m_isNegative);
 }
 
 bool aprn::operator==(Integer const& lhs, Integer const& rhs) {
