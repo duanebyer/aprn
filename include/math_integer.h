@@ -150,6 +150,62 @@ namespace aprn {
     return { (signed long long) result.quot, (signed long long) result.rem, true };
   }
   
+  div_result<Integer> div2(Integer const& lhs, Integer::ShiftType power) {
+    div_result<Integer> result = { lhs, Integer(), true };
+    result.quot.shiftRight(power, result.rem);
+    return result;
+  }
+  div_result<unsigned char> div2(unsigned char lhs, unsigned char power) {
+    return { (unsigned char) (lhs >> power), (unsigned char) (lhs % (1 << power)), true };
+  }
+  div_result<signed char> div2(signed char lhs, signed char power) {
+    if (power < 0) {
+      return { 0, 0, false };
+    }
+    std::div_t result = std::div(lhs, 1 << power);
+    return { (signed char) result.quot, (signed char) result.rem, true };
+  }
+  div_result<unsigned short> div2(unsigned short lhs, unsigned short power) {
+    return { (unsigned short) (lhs >> power), (unsigned short) (lhs % (1 << power)), true };
+  }
+  div_result<signed short> div2(signed short lhs, signed short power) {
+    if (power < 0) {
+      return { 0, 0, false };
+    }
+    std::div_t result = std::div(lhs, 1 << power);
+    return { (signed short) result.quot, (signed short) result.rem, true };
+  }
+  div_result<unsigned int> div2(unsigned int lhs, unsigned int power) {
+    return { (unsigned int) (lhs >> power), (unsigned int) (lhs % (1 << power)), true };
+  }
+  div_result<signed int> div2(signed int lhs, signed int power) {
+    if (power < 0) {
+      return { 0, 0, false };
+    }
+    std::div_t result = std::div(lhs, 1 << power);
+    return { (signed int) result.quot, (signed int) result.rem, true };
+  }
+  div_result<unsigned long> div2(unsigned long lhs, unsigned long power) {
+    return { (unsigned long) (lhs >> power), (unsigned long) (lhs % (1 << power)), true };
+  }
+  div_result<signed long> div2(signed long lhs, signed long power) {
+    if (power < 0) {
+      return { 0, 0, false };
+    }
+    std::ldiv_t result = std::ldiv(lhs, 1 << power);
+    return { (signed long) result.quot, (signed long) result.rem, true };
+  }
+  div_result<unsigned long long> div2(unsigned long long lhs, unsigned long long power) {
+    return { (unsigned long long) (lhs >> power), (unsigned long long) (lhs % (1 << power)), true };
+  }
+  div_result<signed long long> div2(signed long long lhs, signed long long power) {
+    if (power < 0) {
+      return { 0, 0, false };
+    }
+    std::lldiv_t result = std::lldiv(lhs, 1 << power);
+    return { (signed long long) result.quot, (signed long long) result.rem, true };
+  }
+  
 }
 
 #endif

@@ -457,16 +457,21 @@ Integer& Integer::operator^=(Integer const& rhs) {
 }
 
 Integer& Integer::operator>>=(ShiftType rhs) {
+  Integer rem = Integer();
+  return shiftRight(rhs, rem);
+}
+
+Integer& Integer::shiftRight(ShiftType rhs, Integer& rem_out) {
   ShiftType numDigits = rhs / (CHAR_BIT * sizeof(Digit));
   ShiftType numBits = rhs % (CHAR_BIT * sizeof(Digit));
+  rem_out.m_digits.resize(numDigits + 1, 0);
+  rem_out.m_isNegative = false;
   for (SizeType i = 0; i < m_digits.size(); ++i) {
     Digit digit = m_digits[i];
-    if (i >= numDigits) {
-      m_digits[i - numDigits] |= (digit >> numBits);
-    }
-    if (i > numDigits) {
-      m_digits[i - numDigits - 1] |= (digit << (CHAR_BIT - numBits));
-    }
+    i >= numDigits ? m_digits[i - numDigits] : rem_out.m_digits[i] |=
+      (digit >> numBits);
+    i > numDigits ? m_digits[i - numDigits - 1] : rem_out.m_digits[i - 1] |=
+      (digit << (CHAR_BIT * sizeof(Digit) - numBits));
   }
   m_digits.resize(m_digits.size() - numDigits);
   if (m_digits.back() == 0) {
@@ -479,6 +484,10 @@ Integer& Integer::operator>>=(ShiftType rhs) {
 }
 
 Integer& Integer::operator<<=(ShiftType rhs) {
+  return shiftLeft(rhs);
+}
+
+Integer& Integer::shiftLeft(ShiftType rhs) {
   ShiftType numDigits = rhs / (CHAR_BIT * sizeof(Digit));
   ShiftType numBits = rhs % (CHAR_BIT * sizeof(Digit));
   m_digits.resize(m_digits.size() + numDigits + 1, 0);
@@ -488,7 +497,7 @@ Integer& Integer::operator<<=(ShiftType rhs) {
     --i;
     Digit digit = m_digits[i];
     m_digits[i + numDigits] |= (digit << numBits);
-    m_digits[i + numDigits + 1] |= (digit >> (CHAR_BIT - numBits));
+    m_digits[i + numDigits + 1] |= (digit >> (CHAR_BIT * sizeof(Digit) - numBits));
   } while (i != 0);
   if (m_digits.back() == 0) {
     m_digits.pop_back();

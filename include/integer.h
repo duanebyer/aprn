@@ -36,6 +36,7 @@ namespace aprn {
     friend int signum(Integer const& val);
     friend Integer abs(Integer val);
     friend div_result<Integer> div(Integer const& lhs, Integer const& rhs);
+    friend div_result<Integer> div2(Integer const& lhs, ShiftType power);
     
   public:
     
@@ -108,7 +109,10 @@ namespace aprn {
     Integer& subtractMagnitude(Integer const& rhs);
     
     Integer& setToProduct(Integer const& lhs, Integer const& rhs);
-    static bool quotRem(Integer const& lhs, Integer const& rhs, Integer& quot_out, Integer& rem_out);
+    static bool quotRem(Integer const& lhs, Integer const& rhs,
+                        Integer& quot_out, Integer& rem_out);
+    Integer& shiftRight(ShiftType rhs, Integer& rem_out);
+    Integer& shiftLeft(ShiftType rhs);
     
     static int compareMagnitude(Integer const& lhs, Integer const& rhs);
     
