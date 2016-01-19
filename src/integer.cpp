@@ -508,7 +508,8 @@ Integer& Integer::shiftLeft(ShiftType rhs) {
 std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
   int base = 10;
   int sign = signum(obj);
-  std::string digits = "0123456789";
+  std::string digits = os.flags() & std::ios::uppercase ?
+    "0123456789ABCDEF" : "0123456789abcdef";
   
   switch (os.flags() & std::ios::basefield) {
   case std::ios::dec:
@@ -534,25 +535,7 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
   if (sign == 0) {
     os << '0';
   }
-  else if (base == 10) {
-    std::string output = "";
-    std::string signStr = sign < 0 ? "-" : (os.flags() & std::ios::showpos ? "+" : "");
-    Integer value = sign < 0 ? -obj : obj;
-    while (true) {
-      if (value < Integer(base) && !value.m_digits.empty()) {
-        output.insert(output.begin(), digits[value.m_digits.front()]);
-        break;
-      }
-      else {
-        Integer quotient, remainder;
-        Integer::quotRem(value, base, quotient, remainder);
-        value = quotient;
-        output.insert(output.begin(), digits[remainder.m_digits.empty() ? 0 : remainder.m_digits.front()]);
-      }
-    }
-    os << signStr << output;
-  }
-  else {
+  else if (CHAR_BIT % 4 == 0 && base == 16) {
     os << (sign < 0 ? "-" : (os.flags() & std::ios::showpos ? "+" : ""));
     std::ios::fmtflags oldFlags = os.flags();
     os.unsetf(std::ios::showbase);
@@ -568,6 +551,31 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
       os << nextDigitStream.str();
     } while (i != 0);
     os.flags(oldFlags);
+  }
+  else {
+    std::string output = "";
+    std::string signStr = sign < 0 ? "-" : (os.flags() & std::ios::showpos ? "+" : "");
+    Integer value = sign < 0 ? -obj : obj;
+    while (true) {
+      if (value < Integer(base) && !value.m_digits.empty()) {
+        output.insert(output.begin(), digits[value.m_digits.front()]);
+        break;
+      }
+      else {
+        Integer remainder;
+        if (base % 2 == 0) {
+          Integer::ShiftType power = base == 8 ? 3 : 4;
+          value.shiftRight(power, remainder);
+        }
+        else {
+          Integer quotient;
+          Integer::quotRem(value, base, quotient, remainder);
+          value = quotient;
+        }
+        output.insert(output.begin(), digits[remainder.m_digits.empty() ? 0 : remainder.m_digits.front()]);
+      }
+    }
+    os << signStr << output;
   }
   
   return os;
