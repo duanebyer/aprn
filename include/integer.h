@@ -9,7 +9,7 @@
 
 namespace aprn {
   
-  template<typename T> struct div_result;
+  struct div_result;
   
   class Integer {
     
@@ -35,8 +35,13 @@ namespace aprn {
     
     friend int signum(Integer const& val);
     friend Integer abs(Integer val);
-    friend div_result<Integer> div(Integer const& lhs, Integer const& rhs);
-    friend div_result<Integer> div2(Integer const& lhs, ShiftType power);
+    friend bool even(Integer const& val);
+    
+    friend div_result div(Integer const& lhs, Integer const& rhs);
+    friend div_result div2(Integer const& lhs, ShiftType power);
+    friend Integer mod2(Integer const& lhs, ShiftType power);
+    
+    friend Integer gcd(Integer a, Integer b);
     
   public:
     

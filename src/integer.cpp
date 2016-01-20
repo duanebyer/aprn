@@ -465,7 +465,7 @@ Integer& Integer::shiftRight(ShiftType rhs, Integer& rem_out) {
   ShiftType numDigits = rhs / (CHAR_BIT * sizeof(Digit));
   ShiftType numBits = rhs % (CHAR_BIT * sizeof(Digit));
   rem_out.m_digits.resize(numDigits + 1, 0);
-  rem_out.m_isNegative = false;
+  rem_out.m_isNegative = m_isNegative;
   for (SizeType i = 0; i < m_digits.size(); ++i) {
     Digit digit = m_digits[i];
     i >= numDigits ? m_digits[i - numDigits] : rem_out.m_digits[i] |=
@@ -479,6 +479,9 @@ Integer& Integer::shiftRight(ShiftType rhs, Integer& rem_out) {
     if (m_digits.size() == 0) {
       m_isNegative = false;
     }
+  }
+  if (rem_out.m_digits.size() == 0) {
+    rem_out.m_isNegative = false;
   }
   return *this;
 }
@@ -535,7 +538,7 @@ std::ostream& aprn::operator<<(std::ostream& os, Integer const& obj) {
   if (sign == 0) {
     os << '0';
   }
-  else if (CHAR_BIT % 4 == 0 && base == 16) {
+  else if ((CHAR_BIT * sizeof(Integer::Digit)) % 4 == 0 && base == 16) {
     os << (sign < 0 ? "-" : (os.flags() & std::ios::showpos ? "+" : ""));
     std::ios::fmtflags oldFlags = os.flags();
     os.unsetf(std::ios::showbase);
