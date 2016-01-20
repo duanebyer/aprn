@@ -11,6 +11,12 @@ namespace aprn {
   
   struct div_result;
   
+  /**
+   * @class Integer
+   * @author Duane Byer
+   * @brief An unbounded integer type.
+   * 
+   */
   class Integer {
     
     // The type used for the digits of an integer.
@@ -20,6 +26,7 @@ namespace aprn {
     // The type used for the bitwise shift operators.
     using ShiftType = unsigned long long;
     
+    // Friend functions.
     friend Integer operator*(Integer const& lhs, Integer const& rhs);
     friend Integer operator/(Integer const& lhs, Integer const& rhs);
     friend Integer operator%(Integer const& lhs, Integer const& rhs);
@@ -45,7 +52,18 @@ namespace aprn {
     
   public:
     
+    /**
+     * @brief Constructs an Integer with a value of zero.
+     */
     Integer();
+    
+    /*@{*/
+    /**
+     * @brief Constructs an Integer to have a certain value.
+     * @param val The value the Integer should have
+     * These constructors provide implicit conversion from all integral types
+     * to the Integer type.
+     */
     Integer(signed char val);
     Integer(unsigned char val);
     Integer(signed short val);
@@ -56,7 +74,16 @@ namespace aprn {
     Integer(unsigned long val);
     Integer(signed long long val);
     Integer(unsigned long long val);
+    /*@}*/
     
+    /*@{*/
+    /**
+     * @brief Explicit narrowing conversion from Integer to an integral type.
+     * 
+     * If the value of the Integer is too large to be stored in the target type,
+     * then any bits beyond what can be stored are truncated, and the remainder
+     * is returned.
+     */
     explicit inline operator bool() const {
       return m_digits.size() != 0;
     }
@@ -70,33 +97,74 @@ namespace aprn {
     explicit operator unsigned long() const;
     explicit operator signed long long() const;
     explicit operator unsigned long long() const;
+    /*@}*/
     
+    /**
+     * @brief Gives the negative of this Integer.
+     * 
+     * Alternatively, Integer::negate() can be used to get the negative of
+     * this Integer in place.
+     */
     Integer operator-() const;
+    /**
+     * @brief Negates this Integer in place.
+     *
+     * Alternatively, Integer::operator-() will return the negative of this
+     * Integer, leaving the original unchanged.
+     */
+    Integer& negate();
+    /*@{*/
+    /**
+     * @brief Returns this Integer unchanged.
+     * 
+     * This operator is provided for stylistic reasons, but it acts as the identity.
+     */
     Integer const& operator+() const;
     Integer& operator+();
-    Integer& negate();
+    /*@}*/
     
+    /**
+     * @brief Increments this Integer and returns the new value.
+     */
     Integer& operator++();
+    /**
+     * @brief Decrements this Integer and returns the new value.
+     */
     Integer& operator--();
     
+    /**
+     * @brief Increments this Integer and returns the old value.
+     */
     Integer operator++(int) {
       Integer result(*this);
       operator++();
       return result;
     }
     
+    /**
+     * @brief Decrements this Integer and returns the old value.
+     */
     Integer operator--(int) {
       Integer result(*this);
       operator--();
       return result;
     }
     
+    /*@{*/
+    /**
+     * @brief Basic arithmetic operations.
+     */
     Integer& operator+=(Integer const& rhs);
     Integer& operator-=(Integer const& rhs);
     Integer& operator*=(Integer const& rhs);
     Integer& operator/=(Integer const& rhs);
     Integer& operator%=(Integer const& rhs);
+    /*@}*/
     
+    /*@{*/
+    /**
+     * @brief Basic bitwise operations.
+     */
     Integer operator~() const;
     Integer& operator&=(Integer const& rhs);
     Integer& operator|=(Integer const& rhs);
@@ -104,9 +172,11 @@ namespace aprn {
     
     Integer& operator>>=(ShiftType n);
     Integer& operator<<=(ShiftType n);
-    
+    /*@}*/
     
   private:
+    
+    // Internal functions. See source file for documentation.
     
     void makeValid();
     
@@ -141,7 +211,10 @@ namespace aprn {
     
   };
   
-  int signum(Integer const& val);
+  /*@{*/
+  /**
+   * @brief Basic comparison operators.
+   */
   bool operator==(Integer const& lhs, Integer const& rhs);
   bool operator<(Integer const& lhs, Integer const& rhs);
   
@@ -157,7 +230,12 @@ namespace aprn {
   inline bool operator>=(Integer const& lhs, Integer const& rhs) {
     return !operator<(lhs, rhs);
   }
+  /*@}*/
   
+  /*@{*/
+  /**
+   * @brief Basic arithmetic operators.
+   */
   inline Integer operator+(Integer lhs, Integer const& rhs) {
     lhs += rhs;
     return lhs;
@@ -169,7 +247,12 @@ namespace aprn {
   Integer operator*(Integer const& lhs, Integer const& rhs);
   Integer operator/(Integer const& lhs, Integer const& rhs);
   Integer operator%(Integer const& lhs, Integer const& rhs);
+  /*@}*/
   
+  /*@{*/
+  /**
+   * @brief Basic bitwise operators.
+   */
   inline Integer operator&(Integer lhs, Integer const& rhs) {
     lhs &= rhs;
     return lhs;
@@ -186,9 +269,15 @@ namespace aprn {
     lhs <<= rhs;
     return lhs;
   }
-  
+  /*@}*/
+
+  /*@{*/
+  /**
+   * @brief Stream input and output operators.
+   */
   std::ostream& operator<<(std::ostream& os, Integer const& obj);
   std::istream& operator>>(std::istream& is, Integer& obj);
+  /*@}*/
   
 }
 
