@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <istream>
 #include <ostream>
-#include <type_traits>
 #include <vector>
 
 namespace aprn {
@@ -13,9 +12,12 @@ namespace aprn {
   
   /**
    * @class Integer
-   * @author Duane Byer
    * @brief An unbounded integer type.
    * 
+   * This class has been designed so that it can be used almost interchangeably with
+   * the built in integral types.
+   * 
+   * @author Duane Byer
    */
   class Integer {
     
@@ -41,7 +43,7 @@ namespace aprn {
     friend bool operator<(Integer const& lhs, Integer const& rhs);
     
     friend int signum(Integer const& val);
-    friend Integer abs(Integer val);
+    friend Integer abs(Integer const& val);
     friend bool even(Integer const& val);
     
     friend div_result div(Integer const& lhs, Integer const& rhs);
@@ -52,17 +54,17 @@ namespace aprn {
     
   public:
     
-    /**
-     * @brief Constructs an Integer with a value of zero.
-     */
+    /// @brief Constructs an Integer with a value of zero.
     Integer();
     
     /*@{*/
     /**
      * @brief Constructs an Integer to have a certain value.
+     * 
+     * This constructor can also be used to implicitly convert any integral
+     * type to an Integer.
+     * 
      * @param val The value the Integer should have
-     * These constructors provide implicit conversion from all integral types
-     * to the Integer type.
      */
     Integer(signed char val);
     Integer(unsigned char val);
@@ -80,7 +82,7 @@ namespace aprn {
     /**
      * @brief Explicit narrowing conversion from Integer to an integral type.
      * 
-     * If the value of the Integer is too large to be stored in the target type,
+     * If the value of the Integer is too large to be stored in the resulting type,
      * then any bits beyond what can be stored are truncated, and the remainder
      * is returned.
      */
@@ -99,78 +101,61 @@ namespace aprn {
     explicit operator unsigned long long() const;
     /*@}*/
     
-    /**
-     * @brief Gives the negative of this Integer.
-     * 
-     * Alternatively, Integer::negate() can be used to get the negative of
-     * this Integer in place.
-     */
+    /// @brief Gives the negative of this Integer.
     Integer operator-() const;
     /**
      * @brief Negates this Integer in place.
-     *
-     * Alternatively, Integer::operator-() will return the negative of this
-     * Integer, leaving the original unchanged.
      */
     Integer& negate();
     /*@{*/
-    /**
-     * @brief Returns this Integer unchanged.
-     * 
-     * This operator is provided for stylistic reasons, but it acts as the identity.
-     */
+    /// @brief Returns this Integer unchanged.
     Integer const& operator+() const;
     Integer& operator+();
     /*@}*/
     
-    /**
-     * @brief Increments this Integer and returns the new value.
-     */
+    /// @brief Increments this Integer and returns the new value.
     Integer& operator++();
-    /**
-     * @brief Decrements this Integer and returns the new value.
-     */
+    
+    /// @brief Decrements this Integer and returns the new value.
     Integer& operator--();
     
-    /**
-     * @brief Increments this Integer and returns the old value.
-     */
+    /// @brief Increments this Integer and returns the old value.
     Integer operator++(int) {
       Integer result(*this);
       operator++();
       return result;
     }
     
-    /**
-     * @brief Decrements this Integer and returns the old value.
-     */
+    /// @brief Decrements this Integer and returns the old value.
     Integer operator--(int) {
       Integer result(*this);
       operator--();
       return result;
     }
     
-    /*@{*/
-    /**
-     * @brief Basic arithmetic operations.
-     */
+    /// @brief Adds another Integer to this one.
     Integer& operator+=(Integer const& rhs);
+    /// @brief Subtracts another Integer from this one.
     Integer& operator-=(Integer const& rhs);
+    /// @brief Multiplies another Integer to this one.
     Integer& operator*=(Integer const& rhs);
+    /// @brief Divides this Integer by another one.
     Integer& operator/=(Integer const& rhs);
+    /// @brief Modulates this Integer by another one.
     Integer& operator%=(Integer const& rhs);
-    /*@}*/
     
-    /*@{*/
-    /**
-     * @brief Basic bitwise operations.
-     */
+    /// @brief Performs the bitwise not operation (including the sign bit).
     Integer operator~() const;
+    /// @brief Performs the bitwise and operation (including the sign bit).
     Integer& operator&=(Integer const& rhs);
+    /// @brief Performs the bitwise or operation (including the sign bit).
     Integer& operator|=(Integer const& rhs);
+    /// @brief Performs the bitwise xor operation (including the sign bit).
     Integer& operator^=(Integer const& rhs);
     
+    /// @brief Shifts all bits right a certain number of places.
     Integer& operator>>=(ShiftType n);
+    /// @brief Shifts all bits left a certain number of places, expanding the Integer as needed.
     Integer& operator<<=(ShiftType n);
     /*@}*/
     
@@ -211,73 +196,70 @@ namespace aprn {
     
   };
   
-  /*@{*/
-  /**
-   * @brief Basic comparison operators.
-   */
+  /// @brief Checks if this Integer equals another one.
   bool operator==(Integer const& lhs, Integer const& rhs);
+  /// @brief Checks if this Integer is smaller than another one.
   bool operator<(Integer const& lhs, Integer const& rhs);
   
+  /// @brief Checks if this Integer does not equal another one.
   inline bool operator!=(Integer const& lhs, Integer const& rhs) {
     return !operator==(lhs, rhs);
   }
+  /// @brief Checks if this Integer is greater than another one.
   inline bool operator>(Integer const& lhs, Integer const& rhs) {
     return operator<(rhs, lhs);
   }
+  /// @brief Checks if this Integer is smaller than or equal to another one.
   inline bool operator<=(Integer const& lhs, Integer const& rhs) {
     return !operator>(lhs, rhs);
   }
+  /// @brief Checks if this Integer is greater than or equal to another one.
   inline bool operator>=(Integer const& lhs, Integer const& rhs) {
     return !operator<(lhs, rhs);
   }
-  /*@}*/
   
-  /*@{*/
-  /**
-   * @brief Basic arithmetic operators.
-   */
+  /// @brief Returns the sum of two Integers.
   inline Integer operator+(Integer lhs, Integer const& rhs) {
     lhs += rhs;
     return lhs;
   }
+  /// @brief Returns the difference of two Integers.
   inline Integer operator-(Integer lhs, Integer const& rhs) {
     lhs -= rhs;
     return lhs;
   }
+  /// @brief Returns the product of two Integers.
   Integer operator*(Integer const& lhs, Integer const& rhs);
+  /// @brief Returns the quotient of two Integers.
   Integer operator/(Integer const& lhs, Integer const& rhs);
+  /// @brief Returns the modulus of one Integer by another one.
   Integer operator%(Integer const& lhs, Integer const& rhs);
-  /*@}*/
   
-  /*@{*/
-  /**
-   * @brief Basic bitwise operators.
-   */
+  /// @brief Returns the bitwise and of two Integers.
   inline Integer operator&(Integer lhs, Integer const& rhs) {
     lhs &= rhs;
     return lhs;
   }
+  /// @brief Returns the bitwise or of two Integers.
   inline Integer operator|(Integer lhs, Integer const& rhs) {
     lhs |= rhs;
     return lhs;
   }
+  /// @brief Returns the left shift of an Integer by a certain number of places.
   inline Integer operator>>(Integer lhs, Integer::ShiftType rhs) {
     lhs >>= rhs;
     return lhs;
   }
+  /// @brief Returns the right shift of an Integer by a certain number of places, expanding as needed.
   inline Integer operator<<(Integer lhs, Integer::ShiftType rhs) {
     lhs <<= rhs;
     return lhs;
   }
-  /*@}*/
 
-  /*@{*/
-  /**
-   * @brief Stream input and output operators.
-   */
+  /// @brief Outputs an Integer to a standard stream.
   std::ostream& operator<<(std::ostream& os, Integer const& obj);
+  /// @brief Reads in an Integer from a standard stream.
   std::istream& operator>>(std::istream& is, Integer& obj);
-  /*@}*/
   
 }
 

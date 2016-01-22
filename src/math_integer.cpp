@@ -30,22 +30,32 @@ div_result aprn::div2(Integer const& lhs, Integer::ShiftType power) {
 }
 
 Integer aprn::mod2(Integer const& lhs, Integer::ShiftType power) {
+  // This function works by chopping off the last number of bits from the Integer and
+  // putting them into a new Integer which is then returns.
+  
+  // The number of digits to chop of is given by numDigits, and then some bits  of the next
+  // digit after that are also chopped off (numBits).
   Integer::ShiftType numDigits = power / (CHAR_BIT * sizeof(Integer::Digit));
   Integer::ShiftType numBits = power % (CHAR_BIT * sizeof(Integer::Digit));
   Integer result;
   if (lhs.m_digits.size() < numDigits) {
     return lhs;
   }
+  // The digits are chopped off and packaged into the result.
   result.m_digits.insert(result.m_digits.begin(), lhs.m_digits.begin(), lhs.m_digits.begin() + numDigits);
+  // The remaining bits are chopped off and packaged.
   if (lhs.m_digits.size() > numDigits && numBits != 0) {
     result.m_digits.push_back(lhs.m_digits[numDigits] >> (CHAR_BIT * sizeof(Integer::Digit) - numBits));
   }
+  // The sign has to the the same as the left hand side.
   result.m_isNegative = lhs.m_isNegative;
   return result;
 }
 
 Integer aprn::gcd(Integer a, Integer b) {
+  // This is just a straightforward implementation of the binary Euclid's algorithm.
   Integer::ShiftType resultPower = 0;
+  // Instead of recursion, a loop is used to prevent going over the max recursive depth.
   while (true) {
     int compare = Integer::compareMagnitude(a, b);
     if (compare == 0) {
