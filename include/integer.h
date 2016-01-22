@@ -63,8 +63,6 @@ namespace aprn {
      * 
      * This constructor can also be used to implicitly convert any integral
      * type to an Integer.
-     * 
-     * @param val The value the Integer should have
      */
     Integer(signed char val);
     Integer(unsigned char val);
@@ -103,14 +101,16 @@ namespace aprn {
     
     /// @brief Gives the negative of this Integer.
     Integer operator-() const;
-    /**
-     * @brief Negates this Integer in place.
-     */
+    /// @brief Negates this Integer in place.
     Integer& negate();
     /*@{*/
     /// @brief Returns this Integer unchanged.
-    Integer const& operator+() const;
-    Integer& operator+();
+    inline Integer const& operator+() const {
+      return *this;
+    }
+    Integer operator+() {
+      return *this;
+    }
     /*@}*/
     
     /// @brief Increments this Integer and returns the new value.

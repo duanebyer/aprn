@@ -160,14 +160,6 @@ Integer Integer::operator-() const {
   return result.negate();
 }
 
-Integer const& Integer::operator+() const {
-  return *this;
-}
-
-Integer& Integer::operator+() {
-  return *this;
-}
-
 Integer& Integer::negate() {
   m_isNegative = !m_isNegative && (m_digits.size() != 0);
   return *this;
